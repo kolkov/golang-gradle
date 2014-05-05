@@ -1,7 +1,8 @@
 apply plugin: goPlugin
 
-goPlug.goPath = '/Users/daneuriona/goWorkspace'
-goPlug.versionFile = '/Users/daneuriona/goWorkspace/version.txt'
+// Default to user's GOPATH
+goPlug.goPath = "$System.env.GOPATH"
+goPlug.versionFile = "$System.env.GOPATH" + "/version.txt"
 //goPlug.versionMap = [:]
 
 
