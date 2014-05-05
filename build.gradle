@@ -2,7 +2,8 @@ apply plugin: goPlugin
 
 goPlug.goPath = '/Users/daneuriona/goWorkspace'
 goPlug.versionFile = '/Users/daneuriona/goWorkspace/version.txt'
-goPlug.versionMap = [:]
+//goPlug.versionMap = [:]
+
 
 class goPlugin implements Plugin<Project> {
     void apply(Project project) {
@@ -56,13 +57,15 @@ class goPlugin implements Plugin<Project> {
                     
                 }
             }
-            project.goPlug.importList = list as Set
+
+            project.goPlug.importList = list.sort() as Set
         }
 
         project.task('createVersionMap') << {
             def File vf
             vf = project.file(project.goPlug.versionFile)
             // Tab delimited file with projectName<tab>gitSHA on each line
+            // Example: github.com/smartystreets/goconvey/web/server/system    2124ee55e7c5737f5ea4a7744b58069c1499b8cc
             if (vf.isFile()){
                 vf.eachLine{ sourceVersion ->
                     project.goPlug.versionMap[sourceVersion.tokenize("\t")[0]] = sourceVersion.tokenize("\t")[1]
