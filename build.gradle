@@ -62,6 +62,7 @@ class goPlugin implements Plugin<Project> {
         project.task('createVersionMap') << {
             def File vf
             vf = project.file(project.goPlug.versionFile)
+            // Tab delimited file with projectName<tab>gitSHA on each line
             if (vf.isFile()){
                 vf.eachLine{ sourceVersion ->
                     project.goPlug.versionMap[sourceVersion.tokenize("\t")[0]] = sourceVersion.tokenize("\t")[1]
