@@ -110,7 +110,50 @@ class GoPlugin implements Plugin<Project> {
             }
         }
 
-        project.task('clean') 
+        project.task('clean') << {
+            def File goWorkspace
+            goWorkspace = project.file(("$project.go.goPath"+"/src"))
+            goWorkspace.eachDir {t ->
+                def foundGoFile = false
+                if (t.isDirectory()){
+                    t.eachFileMatch(~/.+\.go$/){
+                        foundGoFile = true
+                    }
+                    if (foundGoFile){
+                        //project.tasks["goBuild_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
+                        project.task("clean_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
+                            subTool = "clean"
+                            projectPath = "$t.absolutePath"
+                            runGoTool()
+                        }
+                        project.tasks[("clean_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
+                    }
+                }
+            }
+        }
+
+        project.task('run') << {
+            def File goWorkspace
+            goWorkspace = project.file(("$project.go.goPath"+"/src"))
+            goWorkspace.eachDir {t ->
+                def foundGoFile = false
+                if (t.isDirectory()){
+                    t.eachFileMatch(~/.+\.go$/){
+                        foundGoFile = true
+                    }
+                    if (foundGoFile){
+                        //project.tasks["goBuild_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
+                        project.task("run_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
+                            subTool = "run"
+                            projectPath = "$t.absolutePath"
+                            runGoTool()
+                        }
+                        project.tasks[("run_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
+                    }
+                }
+            }
+        }
+
         project.task('build') << {
             def File goWorkspace
             goWorkspace = project.file(("$project.go.goPath"+"/src"))
@@ -121,8 +164,13 @@ class GoPlugin implements Plugin<Project> {
                         foundGoFile = true
                     }
                     if (foundGoFile){
-                        //println "  Installing "+"$t.absolutePath"-"$project.go.goPath"-"/src/"
-                        project.tasks["goBuild_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
+                        //project.tasks["goBuild_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
+                        project.task("build_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
+                            subTool = "build"
+                            projectPath = "$t.absolutePath"
+                            runGoTool()
+                        }
+                        project.tasks[("build_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
                     }
                 }
             }
@@ -138,10 +186,26 @@ class GoPlugin implements Plugin<Project> {
                         foundGoFile = true
                     }
                     if (foundGoFile){
-                        //println "  Installing "+"$t.absolutePath"-"$project.go.goPath"-"/src/"
-                        project.tasks["goInstall_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
+                        //project.tasks["goInstall_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
+                        project.task("install_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
+                            subTool = "install"
+                            projectPath = "$t.absolutePath"
+                            runGoTool()
+                        }
+                        project.tasks[("install_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
                     }
                 }
+            }
+        }
+
+        project.task('get_project_dependencies') << {
+            project.go.versionMap.each {t ->
+                project.task("get_$t/",type: goTool){
+                    subTool = "get"
+                    projectPath = "$t"
+                    runGoTool()
+                }
+                project.tasks[("get_$t")].execute()
             }
         }
         
@@ -161,6 +225,32 @@ class GoPlugin implements Plugin<Project> {
                         //project.tasks["goTest_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
                         project.task("test_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
                             subTool = "test"
+                            projectPath = "$t.absolutePath"
+                            runGoTool()
+                        }
+                        project.tasks[("test_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
+                    }
+                }
+            }
+        }
+
+        project.task('benchmark') << {
+            FileTree goWorkspace
+            goWorkspace = project.fileTree(dir: ("$project.go.goPath" + "/src"))
+            //goWorkspace = project.fileTree(dir: ("$project.go.currentProject"))
+            goWorkspace.include '**/*_test.go'
+            goWorkspace.visit {test_file ->
+                def t = new File("$test_file".replace('file ','').replace("'",''))
+                def foundATestFile = false
+                if (t.isDirectory()){
+                    t.eachFileMatch(~/.+test\.go$/){
+                        foundATestFile = true
+                    }
+                    if (foundATestFile){
+                        //project.tasks["goTest_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
+                        project.task("test_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
+                            subTool = "test"
+                            option = "-bench"
                             projectPath = "$t.absolutePath"
                             runGoTool()
                         }
