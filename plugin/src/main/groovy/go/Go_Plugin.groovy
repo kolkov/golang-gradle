@@ -101,10 +101,16 @@ class GoPlugin implements Plugin<Project> {
                 def gitVersion = "$projectToUpdate.value"
                 def newTask = "checkout_"+"$projectToUpdate.value"
                 println "Checking out commit: $gitVersion, on project: $folder"
-                project.task("checkout_$gitVersion",type: checkout){
-                    gitRepo ="$folder"
-                    sha = "$gitVersion"
-                    checkItOut()
+                project.task("checkout_$gitVersion",type: Exec){
+                    def option = ''
+                    workingDir = "$folder"
+                    executable = 'git'
+                    if (option == ''){
+                        args "checkout", "$gitVersion"
+                    }
+                    else{
+                        args "$option", "checkout", "$gitVersion"
+                    }
                 }
                 project.tasks["checkout_$gitVersion"].execute()
             }
@@ -120,13 +126,7 @@ class GoPlugin implements Plugin<Project> {
                         foundGoFile = true
                     }
                     if (foundGoFile){
-                        //project.tasks["goBuild_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
-                        project.task("clean_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
-                            subTool = "clean"
-                            projectPath = "$t.absolutePath"
-                            runGoTool()
-                        }
-                        project.tasks[("clean_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
+                        project.tasks["goClean_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
                     }
                 }
             }
@@ -142,13 +142,7 @@ class GoPlugin implements Plugin<Project> {
                         foundGoFile = true
                     }
                     if (foundGoFile){
-                        //project.tasks["goBuild_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
-                        project.task("run_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
-                            subTool = "run"
-                            projectPath = "$t.absolutePath"
-                            runGoTool()
-                        }
-                        project.tasks[("run_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
+                        project.tasks["goRun_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
                     }
                 }
             }
@@ -164,13 +158,7 @@ class GoPlugin implements Plugin<Project> {
                         foundGoFile = true
                     }
                     if (foundGoFile){
-                        //project.tasks["goBuild_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
-                        project.task("build_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
-                            subTool = "build"
-                            projectPath = "$t.absolutePath"
-                            runGoTool()
-                        }
-                        project.tasks[("build_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
+                        project.tasks["goBuild_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
                     }
                 }
             }
@@ -186,13 +174,7 @@ class GoPlugin implements Plugin<Project> {
                         foundGoFile = true
                     }
                     if (foundGoFile){
-                        //project.tasks["goInstall_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
-                        project.task("install_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
-                            subTool = "install"
-                            projectPath = "$t.absolutePath"
-                            runGoTool()
-                        }
-                        project.tasks[("install_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
+                        project.tasks["goInstall_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
                     }
                 }
             }
@@ -222,13 +204,7 @@ class GoPlugin implements Plugin<Project> {
                         foundATestFile = true
                     }
                     if (foundATestFile){
-                        //project.tasks["goTest_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
-                        project.task("test_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
-                            subTool = "test"
-                            projectPath = "$t.absolutePath"
-                            runGoTool()
-                        }
-                        project.tasks[("test_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
+                        project.tasks["goTest_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
                     }
                 }
             }
@@ -247,20 +223,46 @@ class GoPlugin implements Plugin<Project> {
                         foundATestFile = true
                     }
                     if (foundATestFile){
-                        //project.tasks["goTest_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
-                        project.task("test_$t.absolutePath"-"$project.go.goPath"-"/src/",type: goTool){
-                            subTool = "test"
-                            option = "-bench"
-                            projectPath = "$t.absolutePath"
-                            runGoTool()
-                        }
-                        project.tasks[("test_$t.absolutePath"-"$project.go.goPath"-"/src/")].execute()
+                        project.tasks["goBenchmark_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
                     }
                 }
             }
         }
 
         // RULES FOR SPECIAL CASE EXECUTION
+
+        project.tasks.addRule("Pattern: goBenchmark_<ID>"){ String taskName ->
+            if (taskName.startsWith("goBenchmark_")){
+                project.task(taskName,type:Exec){
+                    println "  Benchmarking $taskName"-"goBenchmark_"+" in workspace $project.go.goPath"
+                    workingDir project.go.goPath
+                    executable 'go'
+                    args 'test', '-bench=.', (taskName - 'goBenchmark_')
+                }
+            }
+        }
+
+        project.tasks.addRule("Pattern: goRun_<ID>"){ String taskName ->
+            if (taskName.startsWith("goRun_")){
+                project.task(taskName,type:Exec){
+                    println "  Running $taskName"-"goRun_"+" in workspace $project.go.goPath"
+                    workingDir project.go.goPath
+                    executable 'go'
+                    args 'run', (taskName - 'goRun_')
+                }
+            }
+        }
+        
+        project.tasks.addRule("Pattern: goClean_<ID>"){ String taskName ->
+            if (taskName.startsWith("goClean_")){
+                project.task(taskName,type:Exec){
+                    println "  Cleaning $taskName"-"goClean_"+" in workspace $project.go.goPath"
+                    workingDir project.go.goPath
+                    executable 'go'
+                    args 'clean', (taskName - 'goClean_')
+                }
+            }
+        }
 
         project.tasks.addRule("Pattern: goGet_<ID>"){ String taskName ->
             if (taskName.startsWith("goGet_")){
@@ -323,28 +325,14 @@ class GoPlugin implements Plugin<Project> {
         project.createVersionMap.dependsOn project.goPlugin_Welcome
         project.executeCheckouts.dependsOn project.createVersionMap
         project.printImportList.dependsOn project.findImports
-    }
-}
-
-class checkout extends Exec {
-    String sha = ''
-    String gitRepo = ''
-    String option = ''
-
-    @TaskAction
-    def void checkItOut(){
-        workingDir = "$gitRepo"
-        executable = 'git'
-        if (option == ''){
-            args "checkout", "$sha"
-        }
-        else{
-            args "$option", "checkout", "$sha"
-        }
+    
         
     }
+
 }
 
+/*
+// Future-ism create goTool plugin for calling the gotools with any options we want
 class goTool extends Exec {
     String projectPath = ''
     String subTool = ''
@@ -362,4 +350,4 @@ class goTool extends Exec {
         }
         
     }
-}
+}*/
