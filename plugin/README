@@ -1,0 +1,19 @@
+To import this plugin on another project you'd add something like this to your build.gradle file, assuming the jar was in a local maven repo:
+
+buildscript {
+	repositories {
+	    maven {
+	    	url '../golang-gradle/lib'
+	    }
+	}
+	dependencies {
+		classpath group: 'go.goplugin', name: 'goplugin', version: '1.2'
+	}
+}
+
+apply plugin: 'go'
+
+go {
+	goPath = "$System.env.GOPATH"
+	versionFile = "$System.env.GOPATH" + "/version.txt"
+}	
