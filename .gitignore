@@ -1,1 +1,5 @@
 .gradle/1.12/taskArtifacts/*
+build/*
+plugin/build/*
+lib/*
+plugin/.gradle/*
