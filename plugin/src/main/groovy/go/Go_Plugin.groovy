@@ -65,25 +65,51 @@ class GoPlugin implements Plugin<Project> {
         // INITIALIZATION TASKS
 
         project.task('findImports') << {
-            FileTree goWorkspace
-            goWorkspace = project.fileTree(dir: project.go.currentProject)
-            // We only care about go files
-            goWorkspace.include '**/*.go'
-            //println "Here are some imports"
             def list = []
-            goWorkspace.visit {gofile ->
-                if ("$gofile.relativePath".endsWith('.go')){ 
-                    // Have to translate between gradle object and groovy File object, so remove the 'file ' at start of string
-                    def t = new File("$gofile".replace('file ','').replace("'",'')).text
-                    def simple_depends = t.findAll(~/import\s+\".+\"/)
-                    simple_depends.each{list.add(it.find('\".+\"').replace('"',''))}
-                    def compound_depends = String.valueOf(t.replace('\n','').find(~/import\s\(.+?\)/))
-                    compound_depends.findAll(~/\".+?\"/).each{list.add(it.replace('"',''))}
-                    
-                }
+            
+            task("goGetT",type: Exec){
+                workingDir = "$projectDir"
+                commandLine 'go', 'get', '-t'
             }
 
-            project.go.importList = list.sort() as Set
+            tasks["goGetT"].execute()
+
+            task("goDeps",type: Exec){
+                workingDir = "$projectDir"
+                commandLine 'go','list', "-f", /{{join .Deps "\n"}}/
+                standardOutput = new ByteArrayOutputStream()
+                ext.output = {
+                    return standardOutput.toString()
+                }
+            }
+            tasks["goDeps"].execute()
+            def rawDeps = tasks["goDeps"].output()
+
+            task("goTestDeps",type: Exec){
+                workingDir = "$projectDir"
+                commandLine 'go','list', "-f", /{{join .TestImports "\n"}}/
+                standardOutput = new ByteArrayOutputStream()
+                ext.output = {
+                    return standardOutput.toString()
+                }
+            }
+            tasks["goTestDeps"].execute()
+            def testDeps = tasks["goTestDeps"].output()
+            def allDeps = rawDeps + testDeps
+            testDeps.split().each{ aPackage ->      
+                task("testGoDep${aPackage}",type: Exec){
+                    workingDir = "$projectDir"
+                    commandLine 'go','list', "-f", /{{join .Deps "\n"}}/, /${aPackage}/
+                    standardOutput = new ByteArrayOutputStream()
+                    ext.output = {
+                        return standardOutput.toString()
+                    }
+                }
+                tasks["testGoDep${aPackage}"].execute()
+                allDeps << tasks["testGoDep${aPackage}"].output()
+            }
+            
+            project.go.importList = allDeps.split().sort() as Set
         }
 
         project.task('createVersionMap') << {
@@ -190,17 +216,6 @@ class GoPlugin implements Plugin<Project> {
                         project.tasks["goInstall_"+"$t.absolutePath"-"$project.go.goPath"-"/src/"].execute()
                     }
                 }
-            }
-        }
-
-        project.task('get_project_dependencies') << {
-            project.go.versionMap.each {t ->
-                project.task("get_$t/",type: goTool){
-                    subTool = "get"
-                    projectPath = "$t"
-                    runGoTool()
-                }
-                project.tasks[("get_$t")].execute()
             }
         }
         
