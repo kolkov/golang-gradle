@@ -55,6 +55,13 @@ class GoPlugin implements Plugin<Project> {
             println project.go.importList
         }
 
+        project.task('getImportList') << {
+            project.go.importList.each { aDependency ->
+                project.tasks["goGet_$aDependency"].execute()
+            }
+            
+        }
+
         // INITIALIZATION TASKS
 
         project.task('findImports') << {
@@ -114,6 +121,12 @@ class GoPlugin implements Plugin<Project> {
                 }
                 project.tasks["checkout_$gitVersion"].execute()
             }
+        }
+
+        project.task('prepareGoWorkspace') << {
+            project.tasks['getImportList'].execute()
+            project.tasks['executeCheckouts'].execute()
+            project.tasks['install'].execute()
         }
 
         project.task('clean') << {
@@ -325,6 +338,7 @@ class GoPlugin implements Plugin<Project> {
         project.createVersionMap.dependsOn project.goPlugin_Welcome
         project.executeCheckouts.dependsOn project.createVersionMap
         project.printImportList.dependsOn project.findImports
+        project.getImportList.dependsOn project.findImports
     
         
     }
