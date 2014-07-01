@@ -67,46 +67,46 @@ class GoPlugin implements Plugin<Project> {
         project.task('findImports') << {
             def list = []
             
-            task("goGetT",type: Exec){
-                workingDir = "$projectDir"
+            project.task("goGetT",type: Exec){
+                workingDir = project.projectDir
                 commandLine 'go', 'get', '-t'
             }
 
-            tasks["goGetT"].execute()
+            project.tasks["goGetT"].execute()
 
-            task("goDeps",type: Exec){
-                workingDir = "$projectDir"
+            project.task("goDeps",type: Exec){
+                workingDir = project.projectDir
                 commandLine 'go','list', "-f", /{{join .Deps "\n"}}/
                 standardOutput = new ByteArrayOutputStream()
                 ext.output = {
                     return standardOutput.toString()
                 }
             }
-            tasks["goDeps"].execute()
-            def rawDeps = tasks["goDeps"].output()
+            project.tasks["goDeps"].execute()
+            def rawDeps = project.tasks["goDeps"].output()
 
-            task("goTestDeps",type: Exec){
-                workingDir = "$projectDir"
+            project.task("goTestDeps",type: Exec){
+                workingDir = project.projectDir
                 commandLine 'go','list', "-f", /{{join .TestImports "\n"}}/
                 standardOutput = new ByteArrayOutputStream()
                 ext.output = {
                     return standardOutput.toString()
                 }
             }
-            tasks["goTestDeps"].execute()
-            def testDeps = tasks["goTestDeps"].output()
+            project.tasks["goTestDeps"].execute()
+            def testDeps = project.tasks["goTestDeps"].output()
             def allDeps = rawDeps + testDeps
             testDeps.split().each{ aPackage ->      
-                task("testGoDep${aPackage}",type: Exec){
-                    workingDir = "$projectDir"
+                project.task("testGoDep${aPackage}",type: Exec){
+                    workingDir = project.projectDir
                     commandLine 'go','list', "-f", /{{join .Deps "\n"}}/, /${aPackage}/
                     standardOutput = new ByteArrayOutputStream()
                     ext.output = {
                         return standardOutput.toString()
                     }
                 }
-                tasks["testGoDep${aPackage}"].execute()
-                allDeps << tasks["testGoDep${aPackage}"].output()
+                project.tasks["testGoDep${aPackage}"].execute()
+                allDeps << project.tasks["testGoDep${aPackage}"].output()
             }
             
             project.go.importList = allDeps.split().sort() as Set
@@ -147,12 +147,6 @@ class GoPlugin implements Plugin<Project> {
                 }
                 project.tasks["checkout_$gitVersion"].execute()
             }
-        }
-
-        project.task('prepareGoWorkspace') << {
-            project.tasks['getImportList'].execute()
-            project.tasks['executeCheckouts'].execute()
-            project.tasks['install'].execute()
         }
 
         project.task('clean') << {
@@ -347,6 +341,11 @@ class GoPlugin implements Plugin<Project> {
             }
         }
 
+        project.task('prepareGoWorkspace',dependsOn: ['getImportList','executeCheckouts','install']) << {
+            project.tasks['getImportList'].execute()
+            project.tasks['executeCheckouts'].execute()
+            project.tasks['install'].execute()
+        }
         // TASK DEPENDENCIES
 
         
@@ -354,6 +353,7 @@ class GoPlugin implements Plugin<Project> {
         project.executeCheckouts.dependsOn project.createVersionMap
         project.printImportList.dependsOn project.findImports
         project.getImportList.dependsOn project.findImports
+        project.executeCheckouts.mustRunAfter project.getImportList
     
         
     }
