@@ -1,1 +1,4 @@
 This is meant to be a proof of concept for a golang gradle plugin.  Experimenting with scope and useful tasks.  The idea here is to be able to reuse common go build steps locally and on a build machine.
+
+IMPORTANT:
+You'll need gradle 1.12 to build this plugin.  Newer versions seem to break the project.
