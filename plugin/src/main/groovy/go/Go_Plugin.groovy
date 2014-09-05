@@ -69,10 +69,15 @@ class GoPlugin implements Plugin<Project> {
             
             project.task("goGetT",type: Exec){
                 workingDir = project.projectDir
-                commandLine 'go', 'get', '-t'
+                commandLine 'go', 'get', '-t', './...'
             }
 
-            project.tasks["goGetT"].execute()
+            try{
+                project.tasks["goGetT"].execute()
+            }catch(e){
+                project.tasks["goGetT"].execute()
+            }
+            
 
             project.task("goDeps",type: Exec){
                 workingDir = project.projectDir
@@ -132,9 +137,10 @@ class GoPlugin implements Plugin<Project> {
             project.go.versionMap.each{ projectToUpdate ->
                 def folder = "$project.go.goPath"+"/src/"+"$projectToUpdate.key"
                 def gitVersion = "$projectToUpdate.value"
-                def newTask = "checkout_"+"$projectToUpdate.value"
+                def newTask = "checkout_"+"$projectToUpdate.key"+"$gitVersion"
                 println "Checking out commit: $gitVersion, on project: $folder"
-                project.task("checkout_$gitVersion",type: Exec){
+                println "Creating new task: $newTask"
+                project.task("$newTask",type: Exec){
                     def option = ''
                     workingDir = "$folder"
                     executable = 'git'
@@ -145,7 +151,7 @@ class GoPlugin implements Plugin<Project> {
                         args "$option", "checkout", "$gitVersion"
                     }
                 }
-                project.tasks["checkout_$gitVersion"].execute()
+                project.tasks["$newTask"].execute()
             }
         }
 
