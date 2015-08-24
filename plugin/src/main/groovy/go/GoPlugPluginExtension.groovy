@@ -1,9 +1,9 @@
 package go
 
 class GoPluginExtension {
-    def String goPath = './'
-    def String versionFile = ''
-    def String currentProject = ''
-    def Map versionMap = [:]
-    def LinkedHashSet importList = [] as Set
+    String goPath = './'
+    String versionFile = ''
+    String currentProject = ''
+    Map versionMap = [:]
+    LinkedHashSet importList = [] as Set
 }
